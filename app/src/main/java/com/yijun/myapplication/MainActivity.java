@@ -2,6 +2,8 @@ package com.yijun.myapplication;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -18,6 +20,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.yijun.myapplication.utils.Utils;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -25,13 +28,15 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.yijun.myapplication.utils.Utils.BASE_URL;
+
 public class MainActivity extends AppCompatActivity {
 EditText edit_email;
 EditText edit_passwd;
 EditText edit_check_passwd;
 Button btn_signup;
-
-String baseUrl = "http://snsserver-env.eba-dmyzzcij.ap-northeast-2.elasticbeanstalk.com";
+Button btn_login;
+    SharedPreferences sp;
 
 RequestQueue requestQueue;
 
@@ -40,14 +45,32 @@ RequestQueue requestQueue;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        sp = getSharedPreferences(Utils.PREFERENCES_NAME,MODE_PRIVATE);
+        String token = sp.getString("token",null);
+        // 자동 로그인 토큰이 있으면 웰컴 화면만
+        if (token !=null){
+            Intent i = new Intent(MainActivity.this,WelcomActivity.class);
+            startActivity(i);
+            finish();
+        }
+
+
         requestQueue = Volley.newRequestQueue(MainActivity.this);
 
         edit_email = findViewById(R.id.edit_emial);
         edit_passwd = findViewById(R.id.edit_passwd);
         edit_check_passwd = findViewById(R.id.edit_check_passwd);
         btn_signup = findViewById(R.id.btn_signup);
+        btn_login = findViewById(R.id.btn_login);
 
-
+        btn_login.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(MainActivity.this,Login.class);
+                startActivity(i);
+                finish();
+            }
+        });
 
         btn_signup.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -84,12 +107,30 @@ RequestQueue requestQueue;
                 // 서버로 이메일과 비밀번호를 전송한다.
                 JsonObjectRequest request = new JsonObjectRequest(
                         Request.Method.POST,
-                        baseUrl + "/api/v1/sns_users",
+                        Utils.BASE_URL + "/api/v1/sns_users",
                         object,
                         new Response.Listener<JSONObject>() {
                             @Override
                             public void onResponse(JSONObject response) {
                                 Log.i("회원가입", response.toString());
+
+                                try {
+                                    String token = response.getString("token");
+
+                                    sp = getSharedPreferences(Utils.PREFERENCES_NAME,MODE_PRIVATE);
+                                    SharedPreferences.Editor editor= sp.edit();
+                                    editor.putString("token", token);
+                                    editor.apply();
+
+                                    Intent i = new Intent(MainActivity.this,WelcomActivity.class);
+                                    startActivity(i);
+                                    finish();
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+
+
+
                             }
                         },
                         new Response.ErrorListener() {
