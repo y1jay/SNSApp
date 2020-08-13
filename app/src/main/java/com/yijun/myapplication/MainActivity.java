@@ -15,11 +15,14 @@ import android.widget.Toast;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
-import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.yijun.myapplication.api.NetworkClient;
+import com.yijun.myapplication.api.UserApi;
+import com.yijun.myapplication.model.UserReq;
+import com.yijun.myapplication.model.UserRes;
 import com.yijun.myapplication.utils.Utils;
 
 import org.json.JSONException;
@@ -27,6 +30,11 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 import static com.yijun.myapplication.utils.Utils.BASE_URL;
 
@@ -95,55 +103,42 @@ RequestQueue requestQueue;
                     return;
                 }
 
-                JSONObject  object = new JSONObject();
-                try {
-                    object.put("email",email);
-                    object.put("passwd",passwd);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                // body 셋팅
+                UserReq userReq = new UserReq(email, passwd);
 
 
                 // 서버로 이메일과 비밀번호를 전송한다.
-                JsonObjectRequest request = new JsonObjectRequest(
-                        Request.Method.POST,
-                        Utils.BASE_URL + "/api/v1/sns_users",
-                        object,
-                        new Response.Listener<JSONObject>() {
-                            @Override
-                            public void onResponse(JSONObject response) {
-                                Log.i("회원가입", response.toString());
+                Retrofit retrofit = NetworkClient.getRetrofitClient(MainActivity.this);
+                UserApi userApi = retrofit.create(UserApi.class);
 
-                                try {
-                                    String token = response.getString("token");
+                Call<UserRes> call = userApi.createUser(userReq);
 
-                                    sp = getSharedPreferences(Utils.PREFERENCES_NAME,MODE_PRIVATE);
-                                    SharedPreferences.Editor editor= sp.edit();
-                                    editor.putString("token", token);
-                                    editor.apply();
+                call.enqueue(new Callback<UserRes>() {
+                    @Override
+                    public void onResponse(Call<UserRes> call, Response<UserRes> response) {
+                       // 상태코드가 200 인지 확인
+                        if (response.isSuccessful()){
+                            // response.body() 가 UserRes.이다.
+                           boolean success = response.body().isSuccess();
+                           String token = response.body().getToken();
+                           Log.i("AAAA","success : "+success +" token : " + token);
 
-                                    Intent i = new Intent(MainActivity.this,WelcomActivity.class);
-                                    startActivity(i);
-                                    finish();
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
+                           SharedPreferences sp = getSharedPreferences(Utils.PREFERENCES_NAME,MODE_PRIVATE);
+                           SharedPreferences.Editor editor = sp.edit();
+                           editor.putString("token",token);
+                           editor.apply();
 
-
-
-                            }
-                        },
-                        new Response.ErrorListener() {
-                            @Override
-                            public void onErrorResponse(VolleyError error) {
-                                Log.i("회원가입",error.toString());
-                            }
+                           Intent i = new Intent(MainActivity.this,WelcomActivity.class);
+                           startActivity(i);
+                           finish();
                         }
-                );
+                    }
 
+                    @Override
+                    public void onFailure(Call<UserRes> call, Throwable t) {
 
-                // 네트워크 타고 DB로보내는 것
-                requestQueue.add(request);
+                    }
+                });
 
 
             }

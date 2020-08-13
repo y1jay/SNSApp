@@ -13,14 +13,22 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.android.volley.Request;
-import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.yijun.myapplication.api.NetworkClient;
+import com.yijun.myapplication.api.UserApi;
+import com.yijun.myapplication.model.UserReq;
+import com.yijun.myapplication.model.UserRes;
 import com.yijun.myapplication.utils.Utils;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 import static com.yijun.myapplication.utils.Utils.BASE_URL;
 import static com.yijun.myapplication.utils.Utils.PREFERENCES_NAME;
@@ -59,49 +67,38 @@ Button btnSignup;
                     return;
                 }
 
-                JSONObject  object = new JSONObject();
-                try {
-                    object.put("email",email);
-                    object.put("passwd",passwd);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                UserReq userReq = new UserReq(email,passwd);
 
-                JsonObjectRequest request = new JsonObjectRequest(
-                        Request.Method.POST,
-                        Utils.BASE_URL + "/api/v1/sns_users/login",
-                        object,
-                        new Response.Listener<JSONObject>() {
-                            @Override
-                            public void onResponse(JSONObject response) {
-                                Log.i("로그인", response.toString());
+                Retrofit retrofit = NetworkClient.getRetrofitClient(Login.this);
+                UserApi userApi = retrofit.create(UserApi.class);
 
-                                try {
-                                    String token = response.getString("token");
-                                    sp = getSharedPreferences(Utils.PREFERENCES_NAME,MODE_PRIVATE);
-                                    SharedPreferences.Editor editor= sp.edit();
-                                    editor.putString("token", token);
-                                    editor.apply();
+                Call<UserRes> call = userApi.loginUser(userReq);
 
-                                    Intent i = new Intent(Login.this,WelcomActivity.class);
-                                    startActivity(i);
-                                    finish();
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-                                // 요기요
-                            }
-                        },
-                        new Response.ErrorListener() {
-                            @Override
-                            public void onErrorResponse(VolleyError error) {
-                                Log.i("로그인", error.toString());
-                            }
+                call.enqueue(new Callback<UserRes>() {
+                    @Override
+                    public void onResponse(Call<UserRes> call, Response<UserRes> response) {
+                        if (response.isSuccessful()){
+                            // response.body() 가 UserRes.이다.
+                            boolean success = response.body().isSuccess();
+                            String token = response.body().getToken();
+                            Log.i("AAAA","success : "+success +" token : " + token);
+
+                            SharedPreferences sp = getSharedPreferences(Utils.PREFERENCES_NAME,MODE_PRIVATE);
+                            SharedPreferences.Editor editor = sp.edit();
+                            editor.putString("token",token);
+                            editor.apply();
+
+                            Intent i = new Intent(Login.this,WelcomActivity.class);
+                            startActivity(i);
+                            finish();
                         }
+                    }
 
-                );
+                    @Override
+                    public void onFailure(Call<UserRes> call, Throwable t) {
+                    }
+                });
 
-                Volley.newRequestQueue(Login.this).add(request);
             }
         });
         btnSignup.setOnClickListener(new View.OnClickListener() {

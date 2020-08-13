@@ -10,19 +10,23 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.yijun.myapplication.R;
 import com.yijun.myapplication.model.Post;
+import com.yijun.myapplication.model.Row;
+import com.yijun.myapplication.utils.Utils;
 
 import org.w3c.dom.Text;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder> {
 
     Context context;
-    ArrayList<Post> postArrayList;
+    List<Row> postArrayList;
 
-    public RecyclerViewAdapter(Context context, ArrayList<Post> postArrayList) {
+    public RecyclerViewAdapter(Context context, List<Row> postArrayList) {
         this.context = context;
         this.postArrayList = postArrayList;
     }
@@ -36,10 +40,14 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerViewAdapter.ViewHolder holder, int position) {
-        Post post = postArrayList.get(position);
+        Row post = postArrayList.get(position);
+
 
         holder.txtPosting.setText(post.getPosting());
         holder.txtDate.setText(post.getCreatedAt());
+
+        String url = Utils.BASE_URL + "/uploads/"+ post.getPhotoUrl();
+        Glide.with(context).load(url).into(holder.imgPhoto);
 
 
     }
